@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ワインらいふ便 - 診断・申し込み</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState } = React;
+
+    const WineSubscriptionQuiz = () => {
+      const [currentScreen, setCurrentScreen] = useState('welcome');
+      const [answers, setAnswers] = useState({
+        purpose: '',
+        experience: '',
+        taste: ''
+      });
+      const [formData, setFormData] = useState({
+        lastName: '',
+        firstName: '',
+        zipCode: '',
+        address: '',
+        shippingAddress: '',
+        sameAsAddress: true,
+        agreeToTerms: false,
+        email: '',
+        phone: ''
+      });
+      const [isSubmitting, setIsSubmitting] = useState(false);
+
+      const getProgressWidth = () => {
+        switch(currentScreen) {
+          case 'welcome': return '0%';
+          case 'question1': return '16.6%';
+          case 'question2': return '33.3%';
+          case 'question3': return '50%';
+          case 'result': return '66.6%';
+          case 'personalInfo': return '83.3%';
+          case 'payment': return '100%';
+          case 'thanks': return '100%';
+          default: return '0%';
+        }
+      };
+
+      const nextScreen = () => {
+        const screens = ['welcome', 'question1', 'question2', 'question3', 'result', 'personalInfo', 'payment', 'thanks'];
+        const currentIndex = screens.indexOf(currentScreen);
+        if (currentIndex < screens.length - 1) {
+          setCurrentScreen(screens[currentIndex + 1]);
+        }
+      };
+
+      const resetQuiz = () => {
+        setAnswers({
+          purpose: '',
+          experience: '',
+          taste: ''
+        });
+        setFormData({
+          lastName: '',
+          firstName: '',
+          zipCode: '',
+          address: '',
+          shippingAddress: '',
+          sameAsAddress: true,
+          agreeToTerms: false,
+          email: '',
+          phone: ''
+        });
+        setCurrentScreen('welcome');
+      };
+
+      const handleAnswer = (question, answer) => {
+        setAnswers(prev => ({ ...prev, [question]: answer }));
+      };
+
+      const handleFormChange = (field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+      };
+
+      const handleFormSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (!formData.agreeToTerms) {
+          alert('利用規約への同意が必要です。');
+          return;
+        }
+
+        setIsSubmitting(true);
+
+        // Netlify Formsに送信
+        const submitData = new FormData();
+        submitData.append('form-name', 'wine-application');
+        submitData.append('姓', formData.lastName);
+        submitData.append('名', formData.firstName);
+        submitData.append('メールアドレス', formData.email);
+        submitData.append('電話番号', formData.phone);
+        submitData.append('郵便番号', formData.zipCode);
+        submitData.append('住所', formData.address);
+        submitData.append('配送先', formData.sameAsAddress ? '同じ' : formData.shippingAddress);
+        submitData.append('目的', answers.purpose === 'self' ? 'ご自身で楽しむ' : 'ギフト・贈り物');
+        submitData.append('体験', answers.experience === 'convenient' ? '便利に健康になる' : '美味しく健康になる');
+        submitData.append('味わい', 
+          answers.taste === 'red' ? '果実味あふれる赤ワイン' : 
+          answers.taste === 'white' ? 'スッキリ爽やか白ワイン' : 
+          '季節によって両方'
+        );
+        submitData.append('申し込み日時', new Date().toLocaleString('ja-JP'));
+
+        try {
+          const response = await fetch('/', {
+            method: 'POST',
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams(submitData).toString()
+          });
+
+          if (response.ok) {
+            setIsSubmitting(false);
+            nextScreen(); // 決済画面へ
+          } else {
+            throw new Error('送信エラー');
+          }
+        } catch (error) {
+          setIsSubmitting(false);
+          alert('送信エラーが発生しました。もう一度お試しください。');
+        }
+      };
+
+      const WelcomeScreen = () => (
+        <div className="screen welcome-screen">
+          <div className="hero-section">
+            <div className="wine-icon">🍷</div>
+            <h1 className="main-title">ワインらいふ便</h1>
+            <h2 className="sub-title">50代からの豊かな時間をワインと共に</h2>
+            <p className="description">
+              簡単な3つの質問で、あなたにぴったりのワインをお選びします
+            </p>
+            <button className="start-button" onClick={nextScreen}>
+              はじめる
+            </button>
+          </div>
+        </div>
+      );
+
+      const Question1Screen = () => (
+        <div className="screen question-screen">
+          <h2 className="question-title">どのような目的でご利用ですか？</h2>
+          
+          <div className="options-container">
+            <div 
+              className={`option-card ${answers.purpose === 'self' ? 'selected' : ''}`}
+              onClick={() => {
+                handleAnswer('purpose', 'self');
+                setTimeout(nextScreen, 500);
+              }}
+            >
+              <div className="option-icon">🍷</div>
+              <div className="option-content">
+                <h3>大切な人のために健康でい続ける</h3>
+                <p>ご自身でお楽しみいただく</p>
+              </div>
+            </div>
+
+            <div 
+              className={`option-card ${answers.purpose === 'gift' ? 'selected' : ''}`}
+              onClick={() => {
+                handleAnswer('purpose', 'gift');
+                setTimeout(nextScreen, 500);
+              }}
+            >
+              <div className="option-icon">🎁</div>
+              <div className="option-content">
+                <h3>大切な人に健康でい続けてもらう</h3>
+                <p>ギフト・贈り物として</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+      const Question2Screen = () => (
+        <div className="screen question-screen">
+          <h2 className="question-title">どのような体験をお求めですか？</h2>
+          
+          <div className="options-container">
+            <div 
+              className={`option-card ${answers.experience === 'convenient' ? 'selected' : ''}`}
+              onClick={() => {
+                handleAnswer('experience', 'convenient');
+                setTimeout(nextScreen, 500);
+              }}
+            >
+              <div className="option-icon">📅</div>
+              <div className="option-content">
+                <h3>便利に健康になる</h3>
+                <p>長持ちするボックスワイン</p>
+              </div>
+            </div>
+
+            <div 
+              className={`option-card ${answers.experience === 'premium' ? 'selected' : ''}`}
+              onClick={() => {
+                handleAnswer('experience', 'premium');
+                setTimeout(nextScreen, 500);
+              }}
+            >
+              <div className="option-icon">✨</div>
+              <div className="option-content">
+                <h3>美味しく健康になる</h3>
+                <p>こだわり農家の自然な味わい、厳選ナチュラルワイン</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+      const Question3Screen = () => (
+        <div className="screen question-screen">
+          <h2 className="question-title">どのような味わいをお好みですか？</h2>
+          
+          <div className="options-container">
+            <div 
+              className={`option-card ${answers.taste === 'red' ? 'selected' : ''}`}
+              onClick={() => {
+                handleAnswer('taste', 'red');
+                setTimeout(nextScreen, 500);
+              }}
+            >
+              <div className="option-icon">🍷</div>
+              <div className="option-content">
+                <h3>果実味あふれる赤ワイン</h3>
+                <p>赤ワイン</p>
+              </div>
+            </div>
+
+            <div 
+              className={`option-card ${answers.taste === 'white' ? 'selected' : ''}`}
+              onClick={() => {
+                handleAnswer('taste', 'white');
+                setTimeout(nextScreen, 500);
+              }}
+            >
+              <div className="option-icon">🥂</div>
+              <div className="option-content">
+                <h3>スッキリ爽やか白ワイン</h3>
+                <p>白ワイン</p>
+              </div>
+            </div>
+
+            <div 
+              className={`option-card ${answers.taste === 'seasonal' ? 'selected' : ''}`}
+              onClick={() => {
+                handleAnswer('taste', 'seasonal');
+                setTimeout(nextScreen, 500);
+              }}
+            >
+              <div className="option-icon">🍇</div>
+              <div className="option-content">
+                <h3>季節によって両方楽しむ</h3>
+                <p>3〜9月は白、10〜2月は赤</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+      const ResultScreen = () => (
+        <div className="screen result-screen">
+          <div className="result-content">
+            <div className="success-icon">🎉</div>
+            <h2>診断完了！</h2>
+            <p>あなたにぴったりのワインプランをご提案いたします</p>
+            <div className="result-summary">
+              <h3>あなたの選択：</h3>
+              <ul>
+                <li>目的: {answers.purpose === 'self' ? 'ご自身で楽しむ' : 'ギフト・贈り物'}</li>
+                <li>体験: {answers.experience === 'convenient' ? '便利に健康になる' : '美味しく健康になる'}</li>
+                <li>味わい: {
+                  answers.taste === 'red' ? '果実味あふれる赤ワイン' : 
+                  answers.taste === 'white' ? 'スッキリ爽やか白ワイン' : 
+                  '季節によって両方'
+                }</li>
+              </ul>
+            </div>
+            <div className="button-group">
+              <button className="cta-button primary" onClick={nextScreen}>
+                お申し込み手続きへ
+              </button>
+              <button className="cta-button secondary" onClick={resetQuiz}>
+                最初からやり直す
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+
+      const PersonalInfoScreen = () => (
+        <div className="screen personal-info-screen">
+          <div className="form-content">
+            <div className="form-header">
+              <div className="wine-icon">🍷</div>
+              <h2>お客様情報の入力</h2>
+              <p>配送とご連絡のために必要な情報をご入力ください</p>
+            </div>
+            
+            {/* Netlify Forms用の隠しフォーム */}
+            <form name="wine-application" netlify netlify-honeypot="bot-field" hidden>
+              <input type="text" name="姓" />
+              <input type="text" name="名" />
+              <input type="email" name="メールアドレス" />
+              <input type="tel" name="電話番号" />
+              <input type="text" name="郵便番号" />
+              <input type="text" name="住所" />
+              <input type="text" name="配送先" />
+              <input type="text" name="目的" />
+              <input type="text" name="体験" />
+              <input type="text" name="味わい" />
+              <input type="text" name="申し込み日時" />
+            </form>
+            
+            <form className="personal-info-form" onSubmit={handleFormSubmit}>
+              <div className="name-group">
+                <div className="form-group half">
+                  <label htmlFor="lastName">姓 *</label>
+                  <input
+                    type="text"
+                    id="lastName"
+                    name="姓"
+                    value={formData.lastName}
+                    onChange={(e) => handleFormChange('lastName', e.target.value)}
+                    required
+                    placeholder="山田"
+                  />
+                </div>
+                <div className="form-group half">
+                  <label htmlFor="firstName">名 *</label>
+                  <input
+                    type="text"
+                    id="firstName"
+                    name="名"
+                    value={formData.firstName}
+                    onChange={(e) => handleFormChange('firstName', e.target.value)}
+                    required
+                    placeholder="太郎"
+                  />
+                </div>
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="zipCode">郵便番号 *</label>
+                <input
+                  type="text"
+                  id="zipCode"
+                  name="郵便番号"
+                  value={formData.zipCode}
+                  onChange={(e) => handleFormChange('zipCode', e.target.value)}
+                  required
+                  placeholder="123-4567"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="address">住所 *</label>
+                <input
+                  type="text"
+                  id="address"
+                  name="住所"
+                  value={formData.address}
+                  onChange={(e) => handleFormChange('address', e.target.value)}
+                  required
+                  placeholder="東京都渋谷区○○町1-2-3"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="phone">電話番号 *</label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="電話番号"
+                  value={formData.phone}
+                  onChange={(e) => handleFormChange('phone', e.target.value)}
+                  required
+                  placeholder="03-1234-5678"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="email">メールアドレス *</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="メールアドレス"
+                  value={formData.email}
+                  onChange={(e) => handleFormChange('email', e.target.value)}
+                  required
+                  placeholder="example@email.com"
+                />
+              </div>
+              
+              <div className="shipping-section">
+                <h3>配送先住所</h3>
+                <div className="checkbox-group">
+                  <input
+                    type="checkbox"
+                    id="sameAsAddress"
+                    checked={formData.sameAsAddress}
+                    onChange={(e) => handleFormChange('sameAsAddress', e.target.checked)}
+                  />
+                  <label htmlFor="sameAsAddress">上記住所と同じ</label>
+                </div>
+                
+                {!formData.sameAsAddress && (
+                  <div className="form-group">
+                    <label htmlFor="shippingAddress">配送先住所 *</label>
+                    <input
+                      type="text"
+                      id="shippingAddress"
+                      name="配送先"
+                      value={formData.shippingAddress}
+                      onChange={(e) => handleFormChange('shippingAddress', e.target.value)}
+                      required
+                      placeholder="配送先の住所を入力してください"
+                    />
+                  </div>
+                )}
+              </div>
+              
+              <div className="terms-section">
+                <div className="checkbox-group">
+                  <input
+                    type="checkbox"
+                    id="agreeToTerms"
+                    checked={formData.agreeToTerms}
+                    onChange={(e) => handleFormChange('agreeToTerms', e.target.checked)}
+                    required
+                  />
+                  <label htmlFor="agreeToTerms">
+                    <a href="https://example.com/terms" target="_blank" rel="noopener noreferrer" className="terms-link">
+                      利用規約
+                    </a>
+                    に同意します *
+                  </label>
+                </div>
+              </div>
+              
+              <div className="button-group">
+                <button type="submit" className="cta-button primary" disabled={isSubmitting}>
+                  {isSubmitting ? '送信中...' : '決済方法の選択へ'}
+                </button>
+                <button type="button" className="cta-button secondary" onClick={() => setCurrentScreen('result')} disabled={isSubmitting}>
+                  戻る
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+
+      const PaymentScreen = () => (
+        <div className="screen payment-screen">
+          <div className="payment-content">
+            <div className="form-header">
+              <div className="wine-icon">🍷</div>
+              <h2>決済方法の選択</h2>
+              <p>お支払い方法をお選びください</p>
+            </div>
+            
+            <div className="payment-options">
+              <div className="payment-option">
+                <div className="payment-icon">💳</div>
+                <div className="payment-info">
+                  <h3>クレジットカード</h3>
+                  <p>VISA / MasterCard / JCB / American Express</p>
+                  <p className="payment-note">安全なSSL暗号化通信で決済いたします</p>
+                </div>
+                <button 
+                  className="payment-button"
+                  onClick={() => {
+                    alert('決済ページに移動します（デモ版）');
+                    setTimeout(() => setCurrentScreen('thanks'), 1000);
+                  }}
+                >
+                  クレジットカードで申し込む
+                </button>
+              </div>
+              
+              <div className="payment-option">
+                <div className="payment-icon">🏦</div>
+                <div className="payment-info">
+                  <h3>口座振替</h3>
+                  <p>銀行口座から自動引き落とし</p>
+                  <p className="payment-note">初回のみ口座設定が必要です</p>
+                </div>
+                <button 
+                  className="payment-button"
+                  onClick={() => {
+                    alert('口座設定ページに移動します（デモ版）');
+                    setTimeout(() => setCurrentScreen('thanks'), 1000);
+                  }}
+                >
+                  口座振替で申し込む
+                </button>
+              </div>
+            </div>
+            
+            <div className="selected-plan-summary">
+              <h3>ご注文内容</h3>
+              <div className="plan-details">
+                <p><strong>目的：</strong>{answers.purpose === 'self' ? 'ご自身で楽しむ' : 'ギフト・贈り物'}</p>
+                <p><strong>体験：</strong>{answers.experience === 'convenient' ? '便利に健康になる' : '美味しく健康になる'}</p>
+                <p><strong>味わい：</strong>{
+                  answers.taste === 'red' ? '果実味あふれる赤ワイン' : 
+                  answers.taste === 'white' ? 'スッキリ爽やか白ワイン' : 
+                  '季節によって両方'
+                }</p>
+                <div className="customer-info">
+                  <p><strong>お名前：</strong>{formData.lastName} {formData.firstName} 様</p>
+                  <p><strong>配送先：</strong>{formData.sameAsAddress ? formData.address : formData.shippingAddress}</p>
+                </div>
+                <p className="price"><strong>月額：</strong>￥3,980〜（税込・送料無料）</p>
+              </div>
+            </div>
+            
+            <div className="button-group">
+              <button className="cta-button secondary" onClick={() => setCurrentScreen('personalInfo')}>
+                戻る
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+
+      const ThanksScreen = () => (
+        <div className="screen thanks-screen">
+          <div className="thanks-content">
+            <div className="celebration-icon">🎊</div>
+            <h2>お申し込みありがとうございます！</h2>
+            <p>ワインらいふ便へのお申し込み手続きが完了いたしました。</p>
+            
+            <div className="next-steps">
+              <h3>今後の流れ</h3>
+              <div className="steps">
+                <div className="step">
+                  <div className="step-number">1</div>
+                  <div className="step-content">
+                    <h4>確認メール送信</h4>
+                    <p>ご登録いただいたメールアドレスに確認メールをお送りします</p>
+                  </div>
+                </div>
+                <div className="step">
+                  <div className="step-number">2</div>
+                  <div className="step-content">
+                    <h4>初回配送準備</h4>
+                    <p>あなたの診断結果に基づき、最適なワインを選定いたします</p>
+                  </div>
+                </div>
+                <div className="step">
+                  <div className="step-number">3</div>
+                  <div className="step-content">
+                    <h4>ワインお届け</h4>
+                    <p>1週間以内に初回のワインをお届けいたします</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="contact-info">
+              <p><strong>ご質問・お問い合わせ:</strong></p>
+              <p>📧 support@wine-life.jp</p>
+              <p>📞 03-1234-5678 (平日 10:00-18:00)</p>
+            </div>
+            
+            <button className="cta-button primary" onClick={resetQuiz}>
+              新しい診断を始める
+            </button>
+          </div>
+        </div>
+      );
+
+      return (
+        <div className="wine-quiz-app">
+          <div className="progress-bar">
+            <div className="progress" style={{width: getProgressWidth()}}></div>
+          </div>
+
+          {currentScreen === 'welcome' && <WelcomeScreen />}
+          {currentScreen === 'question1' && <Question1Screen />}
+          {currentScreen === 'question2' && <Question2Screen />}
+          {currentScreen === 'question3' && <Question3Screen />}
+          {currentScreen === 'result' && <ResultScreen />}
+          {currentScreen === 'personalInfo' && <PersonalInfoScreen />}
+          {currentScreen === 'payment' && <PaymentScreen />}
+          {currentScreen === 'thanks' && <ThanksScreen />}
+        </div>
+      );
+    };
+
+    ReactDOM.render(<WineSubscriptionQuiz />, document.getElementById('root'));
+  </script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .wine-quiz-app {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #f5f2f0 0%, #e8e2dc 100%);
+      color: #2c1810;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: rgba(139, 69, 19, 0.1);
+      border-radius: 0;
+      margin: 0;
+      overflow: hidden;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1000;
+    }
+
+    .progress {
+      height: 100%;
+      background: linear-gradient(90deg, #8b4513, #a0522d);
+      border-radius: 0;
+      transition: width 0.6s ease;
+    }
+
+    .screen {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      padding-top: 2.5rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .welcome-screen {
+      text-align: center;
+    }
+
+    .hero-section {
+      background: white;
+      padding: 3rem 2rem;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(139, 69, 19, 0.1);
+      max-width: 600px;
+    }
+
+    .wine-icon {
+      font-size: 4rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .main-title {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #8b4513;
+      margin-bottom: 1rem;
+      line-height: 1.3;
+    }
+
+    .sub-title {
+      font-size: 1.3rem;
+      color: #a0522d;
+      font-weight: 400;
+      margin-bottom: 1.5rem;
+    }
+
+    .description {
+      font-size: 1.1rem;
+      color: #5d4037;
+      margin-bottom: 2.5rem;
+      line-height: 1.6;
+    }
+
+    .start-button {
+      background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%);
+      color: white;
+      border: none;
+      padding: 1rem 3rem;
+      font-size: 1.2rem;
+      font-weight: 600;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(139, 69, 19, 0.3);
+    }
+
+    .start-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(139, 69, 19, 0.4);
+    }
+
+    .question-screen {
+      justify-content: flex-start;
+      padding-top: 2.5rem;
+    }
+
+    .question-title {
+      font-size: 2rem;
+      font-weight: 600;
+      color: #8b4513;
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .options-container {
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+
+    .option-card {
+      background: white;
+      border: 2px solid transparent;
+      border-radius: 15px;
+      padding: 2rem;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(139, 69, 19, 0.08);
+    }
+
+    .option-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(139, 69, 19, 0.15);
+      border-color: #8b4513;
+    }
+
+    .option-card.selected {
+      border-color: #8b4513;
+      background: linear-gradient(135deg, #fff8f5 0%, #fdf2ed 100%);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(139, 69, 19, 0.2);
+    }
+
+    .option-icon {
+      font-size: 2.5rem;
+      margin-right: 1.5rem;
+      min-width: 60px;
+    }
+
+    .option-content h3 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: #8b4513;
+      margin-bottom: 0.5rem;
+    }
+
+    .option-content p {
+      font-size: 1rem;
+      color: #5d4037;
+      margin: 0;
+    }
+
+    .result-screen {
+      text-align: center;
+    }
+
+    .result-content {
+      background: white;
+      padding: 3rem;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(139, 69, 19, 0.1);
+      max-width: 600px;
+    }
+
+    .success-icon {
+      font-size: 4rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .result-content h2 {
+      font-size: 2rem;
+      color: #8b4513;
+      margin-bottom: 1rem;
+    }
+
+    .result-summary {
+      background: #f8f5f3;
+      padding: 2rem;
+      border-radius: 10px;
+      margin: 2rem 0;
+      text-align: left;
+    }
+
+    .result-summary h3 {
+      color: #8b4513;
+      margin-bottom: 1rem;
+    }
+
+    .result-summary ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .result-summary li {
+      padding: 0.5rem 0;
+      color: #5d4037;
+      font-size: 1.1rem;
+    }
+
+    .cta-button {
+      background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%);
+      color: white;
+      border: none;
+      padding: 1.2rem 3rem;
+      font-size: 1.2rem;
+      font-weight: 600;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(139, 69, 19, 0.3);
+      margin: 0.5rem;
+    }
+
+    .cta-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(139, 69, 19, 0.4);
+    }
+
+    .cta-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .cta-button:disabled:hover {
+      transform: none;
+      box-shadow: 0 4px 15px rgba(139, 69, 19, 0.3);
+    }
+
+    .cta-button.secondary {
+      background: transparent;
+      color: #8b4513;
+      border: 2px solid #8b4513;
+      box-shadow: none;
+    }
+
+    .cta-button.secondary:hover {
+      background: #8b4513;
+      color: white;
+      box-shadow: 0 4px 15px rgba(139, 69, 19, 0.3);
+    }
+
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    /* Personal Info Screen Styles */
+    .personal-info-screen {
+      justify-content: flex-start;
+      padding-top: 2.5rem;
+    }
+
+    .form-content {
+      background: white;
+      padding: 3rem;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(139, 69, 19, 0.1);
+      max-width: 600px;
+      width: 100%;
+    }
+
+    .personal-info-form {
+      width: 100%;
+    }
+
+    .name-group {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .name-group .form-group {
+      margin-bottom: 0;
+    }
+
+    .form-group.half {
+      flex: 1;
+    }
+
+    .shipping-section {
+      background: #f8f5f3;
+      padding: 1.5rem;
+      border-radius: 10px;
+      margin: 2rem 0;
+    }
+
+    .shipping-section h3 {
+      color: #8b4513;
+      margin-bottom: 1rem;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+    }
+
+    .checkbox-group label {
+      margin: 0;
+      color: #5d4037;
+      font-weight: normal;
+    }
+
+    .terms-section {
+      background: #fff8f5;
+      padding: 1.5rem;
+      border-radius: 10px;
+      margin: 2rem 0;
+      border: 1px solid #e0e0e0;
+    }
+
+    .terms-link {
+      color: #8b4513;
+      text-decoration: underline;
+      font-weight: 600;
+    }
+
+    .terms-link:hover {
+      color: #a0522d;
+    }
+
+    /* Payment Screen Styles */
+    .payment-screen {
+      justify-content: flex-start;
+      padding-top: 2.5rem;
+    }
+
+    .payment-content {
+      background: white;
+      padding: 3rem;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(139, 69, 19, 0.1);
+      max-width: 700px;
+      width: 100%;
+    }
+
+    .payment-options {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      margin: 2rem 0;
+    }
+
+    .payment-option {
+      border: 2px solid #e0e0e0;
+      border-radius: 15px;
+      padding: 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .payment-option:hover {
+      border-color: #8b4513;
+      box-shadow: 0 4px 15px rgba(139, 69, 19, 0.1);
+    }
+
+    .payment-icon {
+      font-size: 3rem;
+      min-width: 60px;
+    }
+
+    .payment-info {
+      flex: 1;
+    }
+
+    .payment-info h3 {
+      color: #8b4513;
+      margin-bottom: 0.5rem;
+    }
+
+    .payment-info p {
+      color: #5d4037;
+      margin: 0.25rem 0;
+    }
+
+    .payment-note {
+      font-size: 0.9rem;
+      color: #777;
+      font-style: italic;
+    }
+
+    .payment-button {
+      background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%);
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(139, 69, 19, 0.3);
+      white-space: nowrap;
+    }
+
+    .payment-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(139, 69, 19, 0.4);
+    }
+
+    .selected-plan-summary {
+      background: #f8f5f3;
+      padding: 2rem;
+      border-radius: 10px;
+      margin: 2rem 0;
+    }
+
+    .selected-plan-summary h3 {
+      color: #8b4513;
+      margin-bottom: 1rem;
+    }
+
+    .customer-info {
+      background: #fff;
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+
+    .customer-info p {
+      margin: 0.5rem 0;
+      color: #5d4037;
+    }
+
+    /* Common Form Styles */
+    .form-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .form-header .wine-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .form-header h2 {
+      color: #8b4513;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: block;
+      color: #8b4513;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 1rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 1rem;
+      transition: border-color 0.3s ease;
+      box-sizing: border-box;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #8b4513;
+    }
+
+    /* Thanks Screen Styles */
+    .thanks-screen {
+      justify-content: flex-start;
+      padding-top: 2.5rem;
+    }
+
+    .thanks-content {
+      background: white;
+      padding: 3rem;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(139, 69, 19, 0.1);
+      max-width: 700px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .celebration-icon {
+      font-size: 4rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .thanks-content h2 {
+      color: #8b4513;
+      margin-bottom: 1rem;
+    }
+
+    .next-steps {
+      text-align: left;
+      margin: 2rem 0;
+    }
+
+    .next-steps h3 {
+      color: #8b4513;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .step-number {
+      background: #8b4513;
+      color: white;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .step-content h4 {
+      color: #8b4513;
+      margin-bottom: 0.5rem;
+    }
+
+    .step-content p {
+      color: #5d4037;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .contact-info {
+      background: #f8f5f3;
+      padding: 1.5rem;
+      border-radius: 10px;
+      margin: 2rem 0;
+      text-align: left;
+    }
+
+    .contact-info p {
+      margin: 0.5rem 0;
+      color: #5d4037;
+    }
+
+    @media (max-width: 768px) {
+      .screen {
+        padding: 1rem;
+        padding-top: 2rem;
+      }
+      
+      .hero-section {
+        padding: 2rem 1.5rem;
+      }
+      
+      .main-title {
+        font-size: 1.8rem;
+      }
+      
+      .question-title {
+        font-size: 1.6rem;
+      }
+      
+      .option-card {
+        padding: 1.5rem;
+      }
+      
+      .option-icon {
+        font-size: 2rem;
+        margin-right: 1rem;
+      }
+
+      .form-content,
+      .thanks-content,
+      .payment-content {
+        padding: 2rem 1.5rem;
+      }
+
+      .name-group {
+        flex-direction: column;
+        gap: 0;
+      }
+
+      .name-group .form-group {
+        margin-bottom: 1.5rem;
+      }
+
+      .payment-option {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+      }
+
+      .payment-options {
+        gap: 1.5rem;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+
+      .steps {
+        gap: 1rem;
+      }
+
+      .step {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .step-number {
+        align-self: center;
+      }
+    }
+  </style>
+</body>
+</html>
